@@ -13,32 +13,37 @@ import com.jcaa.usersmanagement.domain.valueobject.UserId;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.dto.UserPersistenceDto;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.exception.PersistenceException;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.mapper.UserPersistenceMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
-import org.springframework.stereotype.Repository;
-
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Optional;
+import javax.sql.DataSource;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Repository;
 
 /**
- * Adaptador de persistencia MySQL, el de por defecto.
+ * Adaptador de persistencia para PostgreSQL (Supabase / Render).
  *
- * <p>Implementa los mismos seis puertos que {@link UserRepositoryPostgres}, por eso ambos compiten
- * por los mismos tipos de bean. Por eso lleva {@code @Profile("!postgres")}: sin él, al activar el
- * perfil {@code postgres}, Spring encontraría dos candidatos para cada puerto y no podría decidir
- * cuál inyectar.
+ * <p>Copia de {@link UserRepositoryMySQL} con las diferencias propias del motor:
+ *
+ * <ul>
+ *   <li>{@code NOW()} no existe en PostgreSQL: se usa {@code CURRENT_TIMESTAMP}.
+ *   <li>Los ENUM de MySQL son VARCHAR + CHECK en el esquema, así que los binds de texto no cambian.
+ *   <li>MySQL mantenía {@code updated_at} con {@code ON UPDATE CURRENT_TIMESTAMP}; PostgreSQL no lo
+ *       soporta, por eso el repositorio lo escribe explícitamente en el UPDATE.
+ * </ul>
+ *
+ * <p>El SELECT y el DELETE se copian literalmente: la sintaxis ANSI coincide en ambos motores.
  */
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-@Profile("!postgres")
-public class UserRepositoryMySQL
+@Profile("postgres")
+public class UserRepositoryPostgres
     implements SaveUserPort,
         UpdateUserPort,
         GetUserByIdPort,
@@ -49,10 +54,10 @@ public class UserRepositoryMySQL
   private static final String SQL_INSERT =
       "INSERT INTO users "
       + "(id, name, email, password, role, status, created_at, updated_at) "
-      + "VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())";
+      + "VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)";
 
   private static final String SQL_UPDATE =
-      "UPDATE users SET name = ?, email = ?, password = ?, role = ?, status = ?, updated_at = NOW() "
+      "UPDATE users SET name = ?, email = ?, password = ?, role = ?, status = ?, updated_at = CURRENT_TIMESTAMP "
       + "WHERE id = ?";
 
   private static final String SQL_SELECT_BY_ID =
@@ -71,8 +76,8 @@ public class UserRepositoryMySQL
       + "ORDER BY name ASC";
 
   private static final String SQL_DELETE =
-        "DELETE FROM users "
-        + "WHERE id = ?";
+      "DELETE FROM users "
+      + "WHERE id = ?";
 
   private final DataSource dataSource;
 

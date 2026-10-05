@@ -78,6 +78,15 @@
       <version>${mysql.connector.version}</version>
     </dependency>
 
+    <!-- PostgreSQL JDBC Driver — adaptador para Supabase/Render.
+         Actívalo con SPRING_PROFILES_ACTIVE=postgres. Sin versión explícita
+         porque la gestiona spring-boot-starter-parent. -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
     <!-- JavaMail API (javax.mail legacy — NO migrado a jakarta.mail, intencional) -->
     <dependency>
       <groupId>com.sun.mail</groupId>

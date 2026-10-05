@@ -74,6 +74,53 @@ privilegiado. Los usuarios registrados quedan en estado `PENDING` y un `ADMIN` d
 
 El puerto de MySQL se publica solo en `127.0.0.1`, no en todas las interfaces.
 
+## Motores de base de datos
+
+La aplicación habla con dos motores según el perfil activo, que se elige con
+`SPRING_PROFILES_ACTIVE`:
+
+| Perfil | Driver | Repositorio | Configuración |
+| --- | --- | --- | --- |
+| _(ninguno, por defecto)_ | MySQL | `UserRepositoryMySQL` | `DataSourceSpringConfig` |
+| `postgres` | PostgreSQL | `UserRepositoryPostgres` | `PostgresDataSourceSpringConfig` |
+
+Ambos declaran `@Profile` excluyentes (`"postgres"` y `"!postgres"`). Sin eso los dos
+repositorios implementarían los mismos puertos y Spring no sabría cuál inyectar.
+
+Ambos leen las mismas claves `db.*`, así que cambiar de motor no obliga a tocar la configuración
+de despliegue. La única clave propia de PostgreSQL es `db.postgres.sslmode`, que **no** es
+intercambiable con `db.ssl-mode`: su vocabulario es `disable|allow|prefer|require` en minúsculas,
+mientras que el de MySQL es `DISABLED|PREFERRED|REQUIRED`.
+
+### Diferencias de SQL entre adaptadores
+
+| MySQL | PostgreSQL | Motivo |
+| --- | --- | --- |
+| `NOW()` | `CURRENT_TIMESTAMP` | `NOW()` no existe en PostgreSQL |
+| `ENUM('ADMIN',...)` | `VARCHAR(20) + CHECK` | no hay ENUM |
+| `ON UPDATE CURRENT_TIMESTAMP` | valor explícito en el `UPDATE` | no existe el trigger automático |
+
+`SELECT` y `DELETE` son idénticos: la sintaxis ANSI coincide en los dos motores.
+
+### Usar PostgreSQL
+
+```powershell
+# 1. esquema
+docker run -d --name pg-test -e POSTGRES_PASSWORD=test -p 5432:5432 postgres:16
+Get-Content src/main/resources/schema-postgres.sql -Raw |
+  docker exec -i pg-test psql -U postgres -d postgres
+
+# 2. arrancar la API contra el
+$env:SPRING_PROFILES_ACTIVE = "postgres"
+$env:DB_HOST = "localhost"; $env:DB_PORT = "5432"; $env:DB_NAME = "postgres"
+$env:DB_USERNAME = "postgres"; $env:DB_PASSWORD = "test"
+$env:DB_POSTGRES_SSLMODE = "disable"   # local sin TLS; Supabase exige "require"
+.\mvnw.cmd spring-boot:run
+```
+
+`DB_POSTGRES_SSLMODE` solo hay que cambiarlo en local: el default es `require`, que es lo que
+pide Supabase. Para eliminar el contenedor de pruebas: `docker rm -f pg-test`.
+
 ## Despliegue en Render
 
 El archivo `render.yaml` define el servicio web, el build con Docker y el despliegue
