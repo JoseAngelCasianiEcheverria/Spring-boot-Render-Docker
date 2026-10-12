@@ -10,15 +10,18 @@ services:
       - key: DB_HOST
         sync: false
       - key: DB_PORT
-        sync: false
+        value: "4000"
       - key: DB_NAME
         value: crud_usuarios
       - key: DB_USERNAME
         sync: false
       - key: DB_PASSWORD
         sync: false
+      # TiDB Cloud Starter no admite conexiones sin TLS: obliga a cifrar y ademas
+      # valida el certificado del servidor. El certificado lo emite Let's Encrypt,
+      # asi que el cacerts del JDK ya lo valida y no hace falta truststore propio.
       - key: DB_SSL_MODE
-        value: REQUIRED
+        value: VERIFY_IDENTITY
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT

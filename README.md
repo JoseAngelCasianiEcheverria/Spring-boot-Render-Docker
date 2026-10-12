@@ -90,7 +90,22 @@ repositorios implementarían los mismos puertos y Spring no sabría cuál inyect
 Ambos leen las mismas claves `db.*`, así que cambiar de motor no obliga a tocar la configuración
 de despliegue. La única clave propia de PostgreSQL es `db.postgres.sslmode`, que **no** es
 intercambiable con `db.ssl-mode`: su vocabulario es `disable|allow|prefer|require` en minúsculas,
-mientras que el de MySQL es `DISABLED|PREFERRED|REQUIRED`.
+ mientras que el de MySQL es `DISABLED|PREFERRED|REQUIRED`.
+
+### TiDB Cloud usa el adaptador de MySQL
+
+TiDB es compatible con el protocolo MySQL, así que en producción **no** hace falta ningún perfil:
+se conecta por el adaptador por defecto. Lo único que cambia respecto a un MySQL local es el TLS.
+
+| Variable | MySQL local | TiDB Cloud Starter |
+| --- | --- | --- |
+| `DB_HOST` | `mysql` | `gateway-xxxxxx.<region>.aws.tidbcloud.com` |
+| `DB_PORT` | `3306` | `4000` |
+| `DB_SSL_MODE` | `DISABLED` | `VERIFY_IDENTITY` |
+
+`VERIFY_IDENTITY` es obligatorio en TiDB: no acepta conexiones sin cifrar. A diferencia de un
+MySQL con certificado propio, aquí **no hace falta truststore** — TiDB emite el certificado con
+Let's Encrypt, y esa raíz ya está en el `cacerts` del JDK.
 
 ### Diferencias de SQL entre adaptadores
 
@@ -130,10 +145,10 @@ automático de cada commit que llegue a la rama `main`.
 2. Completar en el panel los secretos marcados como requeridos: `DB_HOST`,
    `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `SMTP_USERNAME`, `SMTP_PASSWORD` y
    `SMTP_FROM_ADDRESS`.
-3. Usar una instancia MySQL accesible desde Internet o desde la red privada de
-   Render y ejecutar `src/main/resources/schema.sql` una vez para crear el esquema.
-   Después crear el administrador con un `INSERT` propio: el seed del repositorio
-   está excluido a propósito.
+3. Crear un cluster **TiDB Cloud Starter** (plan $0, compatible con MySQL), generar la contraseña
+   del usuario `root` en el diálogo *Connect* y ejecutar `src/main/resources/schema.sql` una vez
+   en el SQL Editor para crear `crud_usuarios` y la tabla `users`. Después crear el
+   administrador con un `INSERT` propio: el seed del repositorio está excluido a propósito.
 4. Desplegar el Blueprint. La API quedará disponible en el subdominio
    `onrender.com` asignado por Render y Swagger UI en `/swagger-ui.html`.
 
