@@ -4,13 +4,21 @@ import com.jcaa.usersmanagement.infrastructure.adapter.email.BrevoConfig;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 /**
  * Carga la configuración del adaptador de Brevo desde las propiedades {@code brevo.*}.
  *
  * <p>Es el equivalente de {@link SmtpSpringConfig} para el canal HTTP.
+ *
+ * <p><strong>El {@code @Profile("brevo")} es obligatorio y no decorativo.</strong> Esta clase
+ * valida que exista la clave de API, y esa validación falla a proposito. Sin el perfil, el bean
+ * se construiria tambien cuando el adaptador de Brevo esta inactivo, y un entorno local que
+ * solo usa SMTP —sin {@code BREVO_API_KEY}— moriria al arrancar con un
+ * {@code ConfigurationException} que no tiene nada que ver con su configuracion.
  */
 @Configuration(proxyBeanMethods = false)
+@Profile("brevo")
 public class BrevoSpringConfig {
 
   private static final String PROP_API_KEY = "${brevo.api-key}";

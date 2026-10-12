@@ -34,8 +34,10 @@ services:
       DB_USERNAME: users_app
       DB_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
       DB_SSL_MODE: DISABLED
-      SMTP_HOST: smtp.gmail.com
-      SMTP_PORT: "587"
+      # El host y el puerto salen de .env para poder usar el relay SMTP de Brevo
+      # en lugar de Gmail. Si no se definen, quedan los valores de Gmail.
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM_ADDRESS: ${SMTP_FROM_ADDRESS:-}
