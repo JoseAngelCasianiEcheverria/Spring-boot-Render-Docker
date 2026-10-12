@@ -74,6 +74,47 @@ privilegiado. Los usuarios registrados quedan en estado `PENDING` y un `ADMIN` d
 
 El puerto de MySQL se publica solo en `127.0.0.1`, no en todas las interfaces.
 
+## Canal de correo
+
+Hay dos adaptadores para `EmailSenderPort`, y se elige con `SPRING_PROFILES_ACTIVE`:
+
+| Perfil | Adaptador | Transporte | Dónde funciona |
+| --- | --- | --- | --- |
+| _(ninguno, por defecto)_ | `JavaMailEmailSenderAdapter` | SMTP 25/465/587 | local |
+| `brevo` | `BrevoRestEmailSenderAdapter` | HTTPS 443 | **Render** |
+
+El motivo no es de diseño sino de plataforma: **el plan gratuito de Render bloquea el SMTP
+saliente**, así que el adaptador de JavaMail no puede entregar desde allí sin importar qué
+credenciales se configuren. La API REST de Brevo viaja por el 443 y sí pasa.
+
+Se separan con perfiles excluyentes (`!brevo` y `brevo`), igual que los dos repositorios de
+persistencia. Sin eso, Spring encontraría dos candidatos para el mismo puerto y no sabría cuál
+inyectar.
+
+```powershell
+# Brevo por REST (produccion)
+$env:SPRING_PROFILES_ACTIVE = "brevo"
+$env:BREVO_API_KEY = "xkeysib-..."            # la de API, NO la xsmtpsib- de SMTP
+$env:BREVO_FROM_ADDRESS = "remitente@ejemplo.com"
+.\mvnw.cmd spring-boot:run
+```
+
+Tres errores que cuestan tiempo:
+
+- **`BREVO_API_KEY` es la clave `xkeysib-`, no la `xsmtpsib-`.** Son credenciales distintas: cada
+  una solo sirve para su canal.
+- **`BREVO_FROM_ADDRESS` debe ser un remitente verificado en Brevo**, nunca el login
+  `...@smtp-brevo.com`.
+- **Falla al arrancar, no al enviar.** Si falta `BREVO_API_KEY`, `BrevoSpringConfig` lanza
+  `ConfigurationException` en el arranque. Preferible a arrancar y descubrir el problema en cada
+  envío como un 401 sin explicación.
+
+Para probar el relay SMTP desde local:
+
+```powershell
+& "$env:USERPROFILE\.local\bin\smtp-probe.ps1" -Para "tu@correo.com"
+```
+
 ## Motores de base de datos
 
 La aplicación habla con dos motores según el perfil activo, que se elige con

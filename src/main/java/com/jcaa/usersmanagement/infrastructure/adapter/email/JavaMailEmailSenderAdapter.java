@@ -4,6 +4,7 @@ import com.jcaa.usersmanagement.application.port.out.EmailSenderPort;
 import com.jcaa.usersmanagement.domain.exception.EmailSenderException;
 import com.jcaa.usersmanagement.domain.model.EmailDestinationModel;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import javax.mail.Authenticator;
@@ -17,8 +18,23 @@ import javax.mail.internet.MimeMessage;
 import java.io.UnsupportedEncodingException;
 import java.util.Properties;
 
+/**
+ * Adaptador de correo por SMTP con JavaMail, el de por defecto.
+ *
+ * <p>Implementa el mismo {@link EmailSenderPort} que {@link BrevoRestEmailSenderAdapter}, por
+ * eso ambos compiten por el mismo tipo de bean y por eso lleva {@code @Profile("!brevo")}: sin
+ * él, al activar el perfil {@code brevo}, Spring encontraría dos candidatos para el puerto y no
+ * podría decidir cuál inyectar. Es el mismo motivo por el que
+ * {@link com.jcaa.usersmanagement.infrastructure.adapter.persistence.repository.UserRepositoryMySQL}
+ * lleva {@code !postgres}.
+ *
+ * <p>Nota de infraestructura: desde el plan gratuito de Render este adaptador no puede enviar,
+ * porque la plataforma bloquea el SMTP saliente en 25, 465 y 587. Sigue siendo el adaptador
+ * correcto para desarrollo local.
+ */
 @Slf4j
 @Component
+@Profile("!brevo")
 public class JavaMailEmailSenderAdapter implements EmailSenderPort {
 
   private static final String MAIL_SMTP_HOST = "mail.smtp.host";

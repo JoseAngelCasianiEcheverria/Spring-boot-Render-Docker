@@ -34,6 +34,17 @@ services:
         sync: false
       - key: SMTP_FROM_NAME
         value: Gestion de Usuarios
+      # El plan gratuito de Render bloquea el SMTP saliente (25, 465, 587), asi que
+      # smtp.* nunca entrega en produccion. Con el perfil "brevo" el envio viaja por
+      # HTTPS en el 443, que si esta permitido.
+      - key: SPRING_PROFILES_ACTIVE
+        value: brevo
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_FROM_ADDRESS
+        sync: false
+      - key: BREVO_FROM_NAME
+        value: Gestion de Usuarios
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRATION_SECONDS
