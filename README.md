@@ -109,6 +109,32 @@ Tres errores que cuestan tiempo:
   `ConfigurationException` en el arranque. Preferible a arrancar y descubrir el problema en cada
   envío como un 401 sin explicación.
 
+### Brevo bloquea por IP, y Render cambia de IP
+
+Brevo mantiene una lista blanca de direcciones para las **claves de API**. Una llamada desde una
+IP que no esté en la lista se rechaza con un 401 cuyo cuerpo lo dice explícitamente:
+
+```json
+{"message":"We have detected you are using an unrecognised IP address 181.204.0.125. ...",
+ "code":"unauthorized"}
+```
+
+El aviso es engañoso porque la clave es válida y el prefijo es correcto: parece un problema de
+credencial y no lo es. La lista está en *Settings → Security → Authorized IPs*, y **vacía
+significa sin restricción**.
+
+No hay que agregar la IP de Render: el plan gratuito asigna una distinta en cada despliegue, así
+que habría que repetir el paso indefinidamente. La lista se deja vacía.
+
+> La restricción aplica a las claves **de API**, no a las de SMTP. Por eso un relay SMTP puede
+> funcionar mientras la API REST devuelve 401.
+
+### Un fallo de correo no revierte un registro
+
+El envío es `@Async`. Si el proveedor falla, el usuario **queda creado** y solo se pierde la
+notificación. Por eso `EmailNotificationService` registra el fallo en vez de propagarlo: un
+`throw` dentro de un `@Async` sin manejador se pierde en silencio.
+
 Para probar el relay SMTP desde local:
 
 ```powershell
